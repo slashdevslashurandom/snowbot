@@ -88,7 +88,11 @@ char* make_http_request(const char* restrict url, const char* restrict postfield
     if (!httpreq) return NULL;
 
     curl_easy_setopt(httpreq, CURLOPT_URL, url);
-    if (postfields) curl_easy_setopt(httpreq, CURLOPT_POSTFIELDS, postfields);
+    if (postfields) {
+	curl_easy_setopt(httpreq, CURLOPT_POST, 1);
+	curl_easy_setopt(httpreq, CURLOPT_POSTFIELDS, postfields);
+	curl_easy_setopt(httpreq, CURLOPT_POSTFIELDSIZE, strlen(postfields));
+    }
 
     struct MemoryStruct chunk;
     memset(&chunk,0,sizeof chunk);

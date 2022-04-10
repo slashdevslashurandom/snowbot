@@ -62,14 +62,15 @@ struct irc_bot_params{
 int add_paste_line(irc_session_t* session, struct irc_user_params* up, const char* restrict string) {
 
     size_t cursize = (up->paste_text) ? strlen(up->paste_text) : 0;
-    up->paste_size = cursize + 1 + strlen(string) + 1;
+    size_t newsize = cursize + 1 + strlen(string) + 1;
 
-    char* new_paste_text = realloc(up->paste_text,up->paste_size);
-    if (up->paste_text == NULL) {
+    char* new_paste_text = realloc(up->paste_text,newsize);
+    if (new_paste_text == NULL) {
 	printf("realloc failed!\n");
 	return 1;
     } else {
 	up->paste_text = new_paste_text;
+	up->paste_size = newsize;
     }
 
     if (cursize) {
@@ -183,13 +184,17 @@ int handle_msg(irc_session_t* session, const char* restrict origin, const char* 
 	    switch(msg[0]) {
 		case '.': {
 			      if (strlen(msg) == 1) {
-				  char* resurl = upload_to_pastebin(nick,up->paste_title ? up->paste_title : "snowbot paste",up->paste_text);	
-				  free(up->paste_text);
-				  up->paste_text = NULL;
-				  up->paste_size = 0;
-				  respond(session,nick,channel,resurl);
+				  if (up->paste_text == NULL) {
+				      respond(session,nick,channel,"Can't upload an empty string to pastebin.");
+				  } else {
+				      char* resurl = upload_to_pastebin(nick,up->paste_title ? up->paste_title : "snowbot paste",up->paste_text);	
+				      free(up->paste_text);
+				      up->paste_text = NULL;
+				      up->paste_size = 0;
+				      respond(session,nick,channel,resurl);
+				      free(resurl);
+				  }
 				  up->mode = BM_NONE;
-				  free(resurl);
 			      } else {
 				  if (msg[1] == '.') {
 				      int r = add_paste_line(session,up,msg+1);
@@ -206,7 +211,7 @@ int handle_msg(irc_session_t* session, const char* restrict origin, const char* 
 
 			      break; }
 		default: {
-			     int r = add_paste_line(session,up,msg+1);
+			     int r = add_paste_line(session,up,msg);
 			     if (r != 0) {
 				 respond(session,nick,channel,"Not enough memory to add another string. Sorry.");
 				 if (up->paste_text) free(up->paste_text);
@@ -283,7 +288,7 @@ void irc_url_title_cb(int n, const char* url, const char* title, void* param) {
 	    curtok = strtok_r(NULL,"\n\r",&saveptr);
 
 	    if (curtok) {
-		printf("%d %s\n",left,curtok);
+		printf("%zu %s\n",left,curtok);
 
 		if (left > (strlen(title_linesep) + strlen(curtok) + strlen(title_linebrk)) ) {
 		    strncat(out_title, title_linesep, left); left -= strlen(title_linesep);
@@ -467,6 +472,11 @@ void channel_cb(irc_session_t* session, const char* event, const char* origin, c
     find_urls(session,event,origin,params,count);
 
     if (strncmp(params[1],".",1) == 0) handle_this_message = true;
+
+    struct irc_user_params* up = get_user_params(nick, EB_LOAD);
+    if (up->mode == BM_PASTE) {
+	handle_this_message = true;
+    }
 
     if (strncmp(params[1],ibp->irc_nickname,strlen(ibp->irc_nickname)) == 0) {
 	handle_this_message = true;

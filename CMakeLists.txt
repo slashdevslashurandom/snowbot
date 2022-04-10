@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 project(snowbot)
 
 if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
