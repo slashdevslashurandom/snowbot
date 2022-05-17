@@ -516,23 +516,29 @@ int load_location (int argc, const char** argv, struct irc_user_params* up, stru
 	}
     }
 
-    strncpy(wloc->city_name,argv[0],64);
-    escape_location(wloc->city_name);
 
     if ( (argc == 2) && (strlen(argv[1]) == 2) ) {
+	// two words, the second one is two letters long
+	strncpy(wloc->city_name,argv[0],64);
+   	escape_location(wloc->city_name);
 	strncpy(wloc->sys_country,argv[1],2);
 	return 0; 
-    }
-
-    if (argc >= 2) { //very lame hack
-
-	for (int i=1; i < argc; i++) {
-	    strncat(wloc->city_name, " ", 64 - strlen(wloc->city_name));
-	    strncat(wloc->city_name, argv[i], 64 - strlen(wloc->city_name));
+    } else if (argc >= 2) { 
+    	//two or more words, all to be interpreted as one long name
+	char fullcityname[64];
+	fullcityname[0]=0;
+	for (int i=0; i < argc; i++) {
+	    if (i>0) strncat(fullcityname, " ", 64 - strlen(fullcityname));
+	    strncat(fullcityname, argv[i], 64 - strlen(fullcityname));
 	}
+        escape_location(fullcityname);
+        strncpy(wloc->city_name,fullcityname,64);
+        return 0;
+    } else {
+	strncpy(wloc->city_name,argv[0],64);
+   	escape_location(wloc->city_name);
+   	return 0;
     }
-
-    return 0;
 }
 
 int weather_current_cb(irc_session_t* session, const char* restrict nick, const char* restrict channel, size_t argc, const char** argv) {
